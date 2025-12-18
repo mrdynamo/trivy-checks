@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (include leading v), e.g. v1.11.2-talos'
+        required: true
+        default: v1.11.2-talos
 
 permissions:
   contents: read
@@ -37,7 +43,17 @@ jobs:
       - name: Prepare image tags
         id: prepare-tags
         run: |
-          RELEASE_VERSION=${GITHUB_REF/refs\/tags\/v/}
+          # Determine release version from either a tag push or a manual workflow_dispatch input
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            INPUT_TAG="${{ github.event.inputs.tag }}"
+            case "$INPUT_TAG" in
+              refs/tags/*) RAW_TAG=${INPUT_TAG#refs/tags/} ;;
+              *) RAW_TAG=$INPUT_TAG ;;
+            esac
+            RELEASE_VERSION=${RAW_TAG#v}
+          else
+            RELEASE_VERSION=${GITHUB_REF/refs\/tags\/v/}
+          fi
           MINOR_VERSION=$(echo $RELEASE_VERSION | cut -d. -f1,2)
           MAJOR_VERSION=$(echo $RELEASE_VERSION | cut -d. -f1)
           tags=("latest" "$RELEASE_VERSION" "$MINOR_VERSION" "$MAJOR_VERSION")
