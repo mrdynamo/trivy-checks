@@ -1,5 +1,6 @@
 name: Build and Push to GHCR
 on:
+  workflow_call:
   push:
     tags:
       - "v*"
